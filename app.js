@@ -9,6 +9,8 @@ const passportLocalMongoose = require("passport-local-mongoose");
 
 const User = require("./models/user");
 const Vote = require('./models/votes');
+const { json } = require('body-parser');
+mongoose.set("strictQuery", true);
 
 require("dotenv").config()
 const DB_USERNAME=process.env.DB_USERNAME
@@ -16,11 +18,11 @@ const DB_PASSWORD=process.env.DB_PASSWORD
 
 //Connecting database
 try {
-    console.log("Attempting to establish connection.\n");
-    mongoose.connect(`mongodb+srv://${DB_USERNAME}:${DB_PASSWORD}@online-voting-system-cl.hyhqlkr.mongodb.net/?retryWrites=true&w=majority`);
-    console.log("Connected to DB!!!\n");
+    console.log("Attempting to establish connection.");
+    mongoose.connect(`mongodb+srv://${DB_USERNAME}:${DB_PASSWORD}@online-voting-system-cl.hyhqlkr.mongodb.net/data?retryWrites=true&w=majority`);
+    console.log("Connected to DB!!!");
 } catch(err) {
-    console.log("Could not connect to DB.\n\n");
+    console.log("Could not connect to DB.");
 }
 
 app.use(require("express-session")({
@@ -59,16 +61,26 @@ app.get("/login", (req, res) => {
 });
 
 app.post("/login", async(req, res)=>{
-    const username=req.body.username;
-    const password=req.body.password;
+    let username=req.body.username;
+    let password=req.body.password
     let party=req.body.party;
     party=party.trim()
-    party=party.toUpperCase();
 
-    console.log({username: username, password: password, party: party});
+    let temp=party;
+    party="";
+    const len=temp.length;
+    for(let i=0; i<len; i++) {
+        if(temp.charAt(i) !== ' ')
+           party+=temp.charAt(i);
+    }
+
+    party=party.toUpperCase();
+    username=username.trim();
+
+    console.log(JSON.stringify({username: username, party: party}))
 
     const doc= await User.findOne({username: username, password: password}).exec();
-    if(doc !== null) {
+    if(doc != null) {
         console.log("Logged in as ", await doc.name);
         if(await doc.voted == false) {
             const record= await Vote.findOne({name: party}).exec();
@@ -77,13 +89,15 @@ app.post("/login", async(req, res)=>{
             await Vote.updateOne({name: party}, {$set: { voteCount : x + 1 }});
             await User.updateOne({username: username, password: password}, {$set: { voted: true }}).exec();
             console.log("Successfully voted !!");
-        } else if(doc.voted == true) {
+        } else {
             console.log("You have already voted!");
         }
     } 
     else {
-        console.log("No user found with these details.");
+        console.log("No user found with these details.")
+        console.log(JSON.stringify({username: username}));
     }
+    res.redirect("/");
 });
 
 app.get("/signup", (req, res) => {
@@ -91,8 +105,6 @@ app.get("/signup", (req, res) => {
 });
 
 app.post("/signup", async(req, res) => {
-
-
     await User.create({
         name: req.body.name,
         username: req.body.username,
@@ -100,7 +112,10 @@ app.post("/signup", async(req, res) => {
         age: req.body.age,
         voted: false
     });
+
     console.log("User created !!");
+    console.log(JSON.stringify({name: req.body.name, age: req.body.age}));
+
     res.redirect("/login");
 })
 
