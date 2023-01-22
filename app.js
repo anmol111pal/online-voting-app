@@ -127,10 +127,6 @@ app.get('/vote', (req, res) => {
     res.render('vote', { page: 'vote' })
 })
 
-app.get('/statistics', (req, res) => {
-    res.render('statistics', { page: 'statistics' })
-})
-
 app.get('/contact', (req, res) => {
     res.render('contact', { page: 'contact' })
 })
